@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Data Collection Form</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { 
+            font-family: 'Arial', sans-serif; 
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh; 
+            display: flex; 
+            justify-content: center; 
+            align-items: center; 
+            padding: 20px; 
+        }
+        .form-container {
+            background: white; 
+            padding: 40px; 
+            border-radius: 15px; 
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1); 
+            width: 100%; 
+            max-width: 500px;
+        }
+        .form-header { text-align: center; margin-bottom: 30px; }
+        .form-header h1 { color: #333; font-size: 2.2em; margin-bottom: 10px; }
+        .form-header p { color: #666; font-size: 1.1em; }
+        .form-group { margin-bottom: 20px; }
+        label { display: block; margin-bottom: 8px; font-weight: 600; color: #333; }
+        input {
+            width: 100%; padding: 15px; border: 2px solid #ddd; border-radius: 8px; 
+            font-size: 16px; transition: border-color 0.3s ease;
+        }
+        input:focus { outline: none; border-color: #667eea; box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1); }
+        .submit-btn {
+            width: 100%; background: linear-gradient(135deg, #667eea, #764ba2); 
+            color: white; border: none; padding: 18px; font-size: 1.1em; 
+            font-weight: 600; border-radius: 8px; cursor: pointer; 
+            transition: transform 0.2s ease; margin-top: 10px;
+        }
+        .submit-btn:hover { transform: translateY(-2px); box-shadow: 0 10px 20px rgba(0,0,0,0.2); }
+        .submit-btn:disabled { background: #ccc; cursor: not-allowed; transform: none; }
+        .message { padding: 15px; border-radius: 8px; margin-bottom: 20px; text-align: center; font-weight: 600; }
+        .message.success { background: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
+        .message.error { background: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
+        .loading { display: inline-block; width: 20px; height: 20px; border: 3px solid #fff; border-radius: 50%; border-top-color: transparent; animation: spin 1s linear infinite; margin-right: 10px; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        .stats { text-align: center; margin-top: 20px; padding: 15px; background: #f8f9fa; border-radius: 8px; color: #666; }
+    </style>
+</head>
+<body>
+    <div class="form-container">
+        <div class="form-header">
+            <h1>Data Collection Form</h1>
+            <p>Please fill in your details</p>
+        </div>
+
+        <div id="messageContainer"></div>
+        <div id="statsContainer" class="stats"></div>
+
+        <form id="dataForm">
+            <div class="form-group">
+                <label for="name">Full Name *</label>
+                <input type="text" id="name" name="name" placeholder="Enter your full name" required>
+            </div>
+
+            <div class="form-group">
+                <label for="fatherName">Father's Name *</label>
+                <input type="text" id="fatherName" name="fatherName" placeholder="Enter father's name" required>
+            </div>
+
+            <div class="form-group">
+                <label for="motherName">Mother's Name *</label>
+                <input type="text" id="motherName" name="motherName" placeholder="Enter mother's name" required>
+            </div>
+
+            <div class="form-group">
+                <label for="phone">Phone Number *</label>
+                <input type="tel" id="phone" name="phone" placeholder="Enter phone number" required>
+            </div>
+
+            <div class="form-group">
+                <label for="whatsapp">WhatsApp Number *</label>
+                <input type="tel" id="whatsapp" name="whatsapp" placeholder="Enter WhatsApp number" required>
+            </div>
+
+            <div class="form-group">
+                <label for="email">Email Address *</label>
+                <input type="email" id="email" name="email" placeholder="Enter email address" required>
+            </div>
+
+            <div class="form-group">
+                <label for="password">Password *</label>
+                <input type="password" id="password" name="password" placeholder="Create a password" required minlength="6">
+            </div>
+
+            <button type="submit" class="submit-btn" id="submitBtn">
+                <span id="btnText">Submit Data</span>
+                <div class="loading" id="loadingSpinner" style="display: none;"></div>
+            </button>
+        </form>
+    </div>
+
+    <script>
+        const API_BASE_URL = 'http://localhost:5000/api';
+
+        function showMessage(message, type = 'success') {
+            const messageContainer = document.getElementById('messageContainer');
+            messageContainer.innerHTML = `<div class="message ${type}">${message}</div>`;
+        }
+
+        function setLoading(isLoading) {
+            const submitBtn = document.getElementById('submitBtn');
+            const btnText = document.getElementById('btnText');
+            const loadingSpinner = document.getElementById('loadingSpinner');
+            
+            if (isLoading) {
+                submitBtn.disabled = true;
+                btnText.textContent = 'Submitting...';
+                loadingSpinner.style.display = 'inline-block';
+            } else {
+                submitBtn.disabled = false;
+                btnText.textContent = 'Submit Data';
+                loadingSpinner.style.display = 'none';
+            }
+        }
+
+        async function loadStats() {
+            try {
+                const response = await fetch(`${API_BASE_URL}/stats`);
+                const data = await response.json();
+                if (data.success) {
+                    document.getElementById('statsContainer').innerHTML = `Total submissions: ${data.totalUsers}`;
+                }
+            } catch (error) {
+                document.getElementById('statsContainer').innerHTML = 'Stats: Not available';
+            }
+        }
+
+        document.getElementById('dataForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const formData = {
+                name: document.getElementById('name').value.trim(),
+                fatherName: document.getElementById('fatherName').value.trim(),
+                motherName: document.getElementById('motherName').value.trim(),
+                phone: document.getElementById('phone').value.trim(),
+                whatsapp: document.getElementById('whatsapp').value.trim(),
+                email: document.getElementById('email').value.trim(),
+                password: document.getElementById('password').value
+            };
+
+            const requiredFields = ['name', 'fatherName', 'motherName', 'phone', 'whatsapp', 'email', 'password'];
+            for (let field of requiredFields) {
+                if (!formData[field]) {
+                    showMessage('Please fill in all required fields!', 'error');
+                    return;
+                }
+            }
+
+            if (formData.password.length < 6) {
+                showMessage('Password must be at least 6 characters!', 'error');
+                return;
+            }
+
+            setLoading(true);
+
+            try {
+                const response = await fetch(`${API_BASE_URL}/signup`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(formData)
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    showMessage('✅ Data submitted successfully! Thank you.', 'success');
+                    this.reset();
+                    loadStats();
+                } else {
+                    showMessage(data.error || 'Something went wrong!', 'error');
+                }
+            } catch (error) {
+                showMessage('Network error! Please check your connection.', 'error');
+            } finally {
+                setLoading(false);
+            }
+        });
+
+        // Load stats when page loads
+        loadStats();
+    </script>
+</body>
+</html>
